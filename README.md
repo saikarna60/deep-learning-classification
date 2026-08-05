@@ -19,7 +19,7 @@ transformer classify its sentiment in real time.
 
 ![Image classifier demo](demo-image.png.png)
 
-![Text classifier demo](demo-text.png.png)
+![Text classifier demo](demo.text.png.png)
 
 ## Overview
 
