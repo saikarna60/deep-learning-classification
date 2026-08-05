@@ -10,6 +10,17 @@ tracking via Weights & Biases.
 ![HuggingFace](https://img.shields.io/badge/%F0%9F%A4%97%20Transformers-4.35-yellow)
 ![W&B](https://img.shields.io/badge/Weights%20%26%20Biases-tracking-orange)
 
+## 🔗 Live Demo
+
+**[▶ Try the interactive demo](https://saikarna60.github.io/deep-learning-classification/)**
+
+Pick an image to see the CNN's softmax output, or type a sentence to watch the
+transformer classify its sentiment in real time.
+
+![Image classifier demo](demo-image.png)
+
+![Text classifier demo](demo-text.png)
+
 ## Overview
 
 | Task | Model | Technique |
