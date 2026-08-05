@@ -17,9 +17,9 @@ tracking via Weights & Biases.
 Pick an image to see the CNN's softmax output, or type a sentence to watch the
 transformer classify its sentiment in real time.
 
-![Image classifier demo](demo-image.png)
+![Image classifier demo](demo-image.png.png)
 
-![Text classifier demo](demo-text.png)
+![Text classifier demo](demo-text.png.png)
 
 ## Overview
 
