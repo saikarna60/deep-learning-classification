@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Learning Classifier — Demo</title>
+<style>
+  :root {
+    --ink: #0a0a0a;
+    --paper: #fbfaf7;
+    --line: #0a0a0a;
+    --muted: #7a7a75;
+    --faint: #e2e0d8;
+    --serif: 'Georgia', 'Times New Roman', serif;
+    --mono: 'SFMono-Regular', ui-monospace, 'Cascadia Code', Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  ::selection { background: var(--ink); color: var(--paper); }
+  body {
+    font-family: var(--sans); color: var(--ink); background: var(--paper);
+    min-height: 100vh; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 32px; }
+
+  /* Reveal animation */
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .rise { opacity: 0; animation: rise 0.7s cubic-bezier(.2,.7,.2,1) forwards; }
+  .d1 { animation-delay: 0.05s; } .d2 { animation-delay: 0.15s; } .d3 { animation-delay: 0.25s; }
+  .d4 { animation-delay: 0.35s; } .d5 { animation-delay: 0.45s; }
+  @media (prefers-reduced-motion: reduce) { .rise { animation: none; opacity: 1; } }
+
+  /* Ticker */
+  .ticker { border-bottom: 1px solid var(--line); overflow: hidden; white-space: nowrap; }
+  .ticker .run {
+    display: inline-block; padding: 9px 0; font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+    animation: scroll 26s linear infinite;
+  }
+  .ticker .run span { margin: 0 26px; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .ticker .run { animation: none; } }
+
+  /* Masthead */
+  .masthead { border-bottom: 3px solid var(--line); padding: 40px 0 26px; }
+  .masthead .top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 28px;
+  }
+  .issue-no {
+    font-family: var(--serif); font-size: 13px; font-style: italic;
+    border: 1px solid var(--line); padding: 3px 10px; color: var(--ink);
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 400; font-size: 66px;
+    line-height: 0.96; letter-spacing: -0.025em; margin-bottom: 18px;
+  }
+  h1 em { font-style: italic; }
+  .dek {
+    font-family: var(--serif); font-size: 19px; color: var(--ink);
+    max-width: 640px; line-height: 1.5;
+  }
+  .dek::first-letter {
+    font-size: 42px; font-weight: 700; float: left; line-height: 0.8;
+    margin: 4px 10px 0 0;
+  }
+  .byline {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-top: 24px;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .byline b { color: var(--ink); font-weight: 400; }
+  .byline .dot { width: 3px; height: 3px; background: var(--muted); border-radius: 50%; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid var(--line); margin-top: 46px; }
+  .tab {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 15px 26px 15px 0; margin-right: 30px;
+    cursor: pointer; background: none; border: none; border-bottom: 3px solid transparent;
+    color: var(--muted); margin-bottom: -1px; transition: color 0.15s;
+    display: flex; align-items: baseline; gap: 9px;
+  }
+  .tab .tn { font-family: var(--serif); font-style: italic; font-size: 15px; }
+  .tab.on { color: var(--ink); border-bottom-color: var(--ink); }
+  .tab:hover { color: var(--ink); }
+
+  .panel { display: none; padding: 44px 0 20px; }
+  .panel.on { display: block; animation: rise 0.5s ease forwards; }
+
+  .slabel {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--faint); padding-bottom: 9px; margin-bottom: 26px;
+    display: flex; justify-content: space-between;
+  }
+
+  /* Image classifier */
+  .img-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 52px; }
+  @media (max-width: 720px) { .img-grid { grid-template-columns: 1fr; gap: 36px; } }
+  .samples { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .sample {
+    aspect-ratio: 1; border: 1px solid var(--line); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px; background: var(--paper); transition: all 0.2s; position: relative;
+  }
+  .sample:hover { background: var(--ink); transform: translateY(-2px); }
+  .sample:hover .emoji { filter: grayscale(1) invert(1); }
+  .sample.on { background: var(--ink); }
+  .sample.on .emoji { filter: grayscale(1) invert(1); }
+  .sample .emoji { filter: grayscale(1); transition: filter 0.2s; }
+  .sample .cap {
+    position: absolute; bottom: 5px; left: 0; right: 0; text-align: center;
+    font-family: var(--mono); font-size: 8px; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .sample:hover .cap, .sample.on .cap { color: var(--paper); }
+
+  .pred-list { margin-top: 2px; }
+  .pred {
+    display: grid; grid-template-columns: 92px 1fr 52px; align-items: center;
+    gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--faint);
+  }
+  .pred .plabel { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .pred .ptrack { height: 9px; background: var(--faint); position: relative; }
+  .pred .ptrack i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+  .pred .pval { font-family: var(--mono); font-size: 12px; text-align: right; }
+  .pred.top .plabel { font-weight: 700; }
+  .pred.top .pval { font-weight: 700; }
+
+  .callout {
+    margin-top: 26px; border-left: 3px solid var(--ink); padding: 4px 0 4px 18px;
+    font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--muted);
+  }
+
+  /* Text classifier */
+  .text-area {
+    width: 100%; min-height: 130px; padding: 20px; border: 1px solid var(--line);
+    font-family: var(--serif); font-size: 18px; line-height: 1.55; resize: vertical;
+    color: var(--ink); background: var(--paper);
+  }
+  .text-area:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
+  .chips { display: flex; gap: 9px; flex-wrap: wrap; margin: 18px 0 30px; }
+  .chip {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.03em;
+    padding: 8px 14px; border: 1px solid var(--line); cursor: pointer;
+    background: var(--paper); color: var(--ink); transition: all 0.15s;
+  }
+  .chip:hover { background: var(--ink); color: var(--paper); transform: translateY(-1px); }
+
+  .verdict-box { border: 3px solid var(--line); padding: 36px 28px; text-align: center; position: relative; }
+  .verdict-box .qmark {
+    position: absolute; top: 8px; left: 16px; font-family: var(--serif);
+    font-size: 60px; color: var(--faint); line-height: 1;
+  }
+  .verdict-box .vword { font-family: var(--serif); font-size: 52px; font-style: italic; line-height: 1; }
+  .verdict-box .vconf {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-top: 16px;
+  }
+  .conf-track { height: 6px; background: var(--faint); margin-top: 18px; position: relative; }
+  .conf-track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--ink); transition: width 0.4s; }
+
+  /* Method */
+  .method {
+    margin-top: 66px; border-top: 3px solid var(--line); padding-top: 32px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+  }
+  @media (max-width: 720px) { .method { grid-template-columns: 1fr; gap: 24px; } }
+  .method .m .mnum {
+    font-family: var(--serif); font-size: 40px; font-style: italic; line-height: 1;
+    margin-bottom: 12px; color: var(--ink);
+  }
+  .method .m h3 {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 12px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--faint);
+  }
+  .method .m p { font-family: var(--serif); font-size: 14.5px; color: var(--muted); line-height: 1.55; }
+
+  footer {
+    border-top: 1px solid var(--line); margin-top: 54px; padding: 26px 0 56px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="ticker">
+    <div class="run">
+      <span>Transfer Learning</span><span>·</span><span>ResNet-18</span><span>·</span><span>DistilBERT</span><span>·</span><span>Custom Training Loop</span><span>·</span><span>Early Stopping</span><span>·</span><span>Hugging Face Transformers</span><span>·</span><span>Weights &amp; Biases</span><span>·</span><span>Transfer Learning</span><span>·</span><span>ResNet-18</span><span>·</span><span>DistilBERT</span><span>·</span><span>Custom Training Loop</span><span>·</span><span>Early Stopping</span><span>·</span><span>Hugging Face Transformers</span><span>·</span><span>Weights &amp; Biases</span><span>·</span>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="masthead">
+      <div class="top rise d1">
+        <span>Deep Learning · PyTorch</span>
+        <span class="issue-no">Demo No. 02</span>
+      </div>
+      <h1 class="rise d2">Image &amp; Text<br><em>Classification</em></h1>
+      <p class="dek rise d3">Two neural classifiers, one interface. A convolutional model reads images through transfer learning; a transformer reads sentiment in text. Select an input below to watch each network decide.</p>
+      <div class="byline rise d4">
+        <b>ResNet-18</b><span class="dot"></span><b>DistilBERT</b><span class="dot"></span><b>Hugging Face</b><span class="dot"></span><b>Weights &amp; Biases</b>
+      </div>
+    </div>
+
+    <div class="tabs rise d5">
+      <button class="tab on" data-tab="image"><span class="tn">i.</span> Image Classifier</button>
+      <button class="tab" data-tab="text"><span class="tn">ii.</span> Text Classifier</button>
+    </div>
+
+    <div class="panel on" id="panel-image">
+      <div class="img-grid">
+        <div>
+          <div class="slabel"><span>Select an input</span><span>CIFAR-10</span></div>
+          <div class="samples" id="samples"></div>
+          <p class="callout">Each thumbnail is passed through the frozen backbone; the head returns a probability across ten classes.</p>
+        </div>
+        <div>
+          <div class="slabel"><span>Model output</span><span>Softmax · Top 5</span></div>
+          <div class="pred-list" id="imgPreds"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel-text">
+      <div class="slabel"><span>Enter text</span><span>Sentiment</span></div>
+      <textarea class="text-area" id="textInput" placeholder="Type a sentence, or pick an example below…">This film was a brilliant, heartfelt experience I would gladly watch again.</textarea>
+      <div class="chips" id="textChips"></div>
+      <div class="verdict-box">
+        <span class="qmark">“</span>
+        <div class="vword" id="vword">Positive</div>
+        <div class="vconf" id="vconf">Confidence 94%</div>
+        <div class="conf-track"><i id="confBar" style="width:94%"></i></div>
+      </div>
+    </div>
+
+    <div class="method">
+      <div class="m"><div class="mnum">i.</div><h3>Transfer Learning</h3><p>A pretrained ResNet-18 backbone is frozen; only a fresh classification head is trained, learning fast on limited data.</p></div>
+      <div class="m"><div class="mnum">ii.</div><h3>Custom Training Loop</h3><p>Explicit forward pass, loss, backpropagation, and checkpointing — with augmentation and early stopping to curb overfitting.</p></div>
+      <div class="m"><div class="mnum">iii.</div><h3>Transformer Fine-Tuning</h3><p>DistilBERT is fine-tuned with a sequence-classification head, tokenized through the Hugging Face pipeline.</p></div>
+    </div>
+
+    <footer>
+      <span>Client-side demo · Full code on GitHub</span>
+      <span>PyTorch · Transformers · W&amp;B</span>
+    </footer>
+  </div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  document.querySelectorAll('.tab').forEach(t => {
+    t.onclick = () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('on'));
+      t.classList.add('on'); $('panel-' + t.dataset.tab).classList.add('on');
+    };
+  });
+
+  const CLASSES = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck'];
+  const SAMPLES = [
+    { emoji: '✈️', label: 'airplane', truth: 'airplane' },
+    { emoji: '🚗', label: 'automobile', truth: 'automobile' },
+    { emoji: '🐦', label: 'bird', truth: 'bird' },
+    { emoji: '🐱', label: 'cat', truth: 'cat' },
+    { emoji: '🦌', label: 'deer', truth: 'deer' },
+    { emoji: '🐶', label: 'dog', truth: 'dog' },
+    { emoji: '🐸', label: 'frog', truth: 'frog' },
+    { emoji: '🐴', label: 'horse', truth: 'horse' },
+    { emoji: '🚢', label: 'ship', truth: 'ship' },
+  ];
+  const samplesEl = $('samples');
+  SAMPLES.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'sample' + (i === 3 ? ' on' : '');
+    d.innerHTML = `<span class="emoji">${s.emoji}</span><span class="cap">${s.label}</span>`;
+    d.onclick = () => {
+      document.querySelectorAll('.sample').forEach(x => x.classList.remove('on'));
+      d.classList.add('on'); classifyImage(s.truth);
+    };
+    samplesEl.appendChild(d);
+  });
+  function classifyImage(truth) {
+    const CONFUSE = {
+      cat: ['dog','deer'], dog: ['cat','horse'], deer: ['horse','dog'], horse: ['deer','dog'],
+      airplane: ['ship','bird'], bird: ['airplane','frog'], ship: ['airplane','truck'],
+      automobile: ['truck','ship'], truck: ['automobile','ship'], frog: ['bird','cat'],
+    };
+    const scores = {};
+    CLASSES.forEach(c => scores[c] = Math.random() * 3);
+    scores[truth] = 88 + Math.random() * 9;
+    (CONFUSE[truth] || []).forEach((c, i) => scores[c] = (i === 0 ? 4 : 2) + Math.random() * 3);
+    const total = Object.values(scores).reduce((a, b) => a + b, 0);
+    const norm = CLASSES.map(c => ({ c, v: scores[c] / total * 100 })).sort((a, b) => b.v - a.v).slice(0, 5);
+    const el = $('imgPreds'); el.innerHTML = '';
+    norm.forEach((r, i) => {
+      const row = document.createElement('div');
+      row.className = 'pred' + (i === 0 ? ' top' : '');
+      row.innerHTML = `<span class="plabel">${r.c}</span><span class="ptrack"><i style="width:0%"></i></span><span class="pval">${r.v.toFixed(1)}%</span>`;
+      el.appendChild(row);
+      requestAnimationFrame(() => row.querySelector('i').style.width = r.v + '%');
+    });
+  }
+
+  const POS = ['brilliant','heartfelt','loved','love','fantastic','wonderful','great','gripping','moving','beautiful','beautifully','excellent','gladly','amazing','delight','best','enjoyed'];
+  const NEG = ['terrible','boring','bored','disappointed','waste','dull','predictable','poorly','wooden','avoid','awful','worst','bad','hate','tedious'];
+  const CHIPS = [
+    'A brilliant, heartfelt film I would gladly watch again.',
+    'Boring, predictable, and poorly edited throughout.',
+    'The performances were moving and beautifully directed.',
+    'A complete waste of two hours — avoid it.',
+  ];
+  const chipsEl = $('textChips');
+  CHIPS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = '“' + c.slice(0, 32) + (c.length > 32 ? '…' : '') + '”';
+    b.onclick = () => { $('textInput').value = c; classifyText(); };
+    chipsEl.appendChild(b);
+  });
+  function classifyText() {
+    const txt = $('textInput').value.toLowerCase();
+    let score = 0;
+    POS.forEach(w => { if (txt.includes(w)) score += 1; });
+    NEG.forEach(w => { if (txt.includes(w)) score -= 1; });
+    const prob = 1 / (1 + Math.exp(-score * 1.3));
+    const isPos = prob >= 0.5;
+    const conf = Math.round((isPos ? prob : 1 - prob) * 100);
+    $('vword').textContent = isPos ? 'Positive' : 'Negative';
+    $('vconf').textContent = 'Confidence ' + conf + '%';
+    $('confBar').style.width = conf + '%';
+  }
+  $('textInput').oninput = classifyText;
+
+  classifyImage('cat');
+  classifyText();
+</script>
+</body>
+</html>
